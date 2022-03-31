@@ -1,0 +1,10 @@
+[config]
+time = 20
+
+[frp]
+frp_dashboard = http://127.0.0.1:7500/
+frp_user = admin
+frp_password = 123456
+
+[bark]
+url = https://api.day.app/

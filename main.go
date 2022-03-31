@@ -1,84 +1,47 @@
 package main
 
 import (
-	"io"
+	"FrpConnNotice/bark"
+	"FrpConnNotice/frp"
 	"log"
-	"net/http"
+	"time"
 
-	jsoniter "github.com/json-iterator/go"
+	"github.com/go-ini/ini"
 )
 
-type msg struct {
-	logo    string
-	content string
-}
+var check func(string, string, string, string, string) (bool, error)
 
-func (m msg) send() (string, error) {
-	resp, err := http.Get("" + m.content + "?icon=" + m.logo)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return "", err
-	}
-	return string(body), nil
-}
+var cfg *ini.File
 
-func notice() {
-	notice := msg{
-		logo:    "https://www.minecraft.net/etc.clientlibs/minecraft/clientlibs/main/resources/img/menu/menu-buy.gif",
-		content: "MC有玩家上线了",
-	}
-	res, err := notice.send()
+func init() {
+	check = frp.IsOnline()
+	config, err := ini.Load("config.ini")
 	if err != nil {
-		log.Print(err)
+		log.Fatal("Fail to read file: ", err)
 	}
-	resJson := []byte(res)
-	message := jsoniter.Get(resJson, "message").ToString()
-	log.Print("发送通知:", message)
-}
-
-func isOnline() func() (bool, error) {
-	lastConns := 0
-	return func() (bool, error) {
-		client := http.Client{}
-		req, err := http.NewRequest("GET", "", nil)
-		if err != nil {
-			return false, err
-		}
-		req.SetBasicAuth("", "")
-		resp, err := client.Do(req)
-		if err != nil {
-			return false, err
-		}
-		defer resp.Body.Close()
-		body, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return false, err
-		}
-		resJson := []byte(body)
-		var conns int
-		for i := 0; ; i++ {
-			name := jsoniter.Get(resJson, "proxies", i, "name").ToString()
-			if name == "mc" || name == "" {
-				conns = jsoniter.Get(resJson, "proxies", 0, "cur_conns").ToInt()
-				break
-			}
-		}
-		if conns > lastConns {
-			lastConns = conns
-			return true, nil
-		} else {
-			lastConns = conns
-			return false, nil
-		}
-	}
+	cfg = config
 }
 
 func main() {
-	// notice()
-	check := isOnline()
-	check()
+	second, err := cfg.Section("config").Key("time").Int64()
+	if err != nil {
+		log.Fatal(err)
+	}
+	frpurl := cfg.Section("frp").Key("frp_dashboard").String()
+	frpuser := cfg.Section("frp").Key("user").String()
+	frppassword := cfg.Section("frp").Key("password").String()
+	frpname := cfg.Section("frp").Key("frp_conn_name").String()
+	frptype := cfg.Section("frp").Key("frp_conn_type").String()
+	for range time.Tick(time.Duration(second) * time.Second) {
+		status, err := check(frpurl, frpuser, frppassword, frpname, frptype)
+		if err != nil {
+			log.Print(err)
+		}
+		if status {
+			barkurl := cfg.Section("bark").Key("url").String()
+			bark.Notice(barkurl)
+		} else {
+			log.Print("无需通知")
+		}
+	}
 }
