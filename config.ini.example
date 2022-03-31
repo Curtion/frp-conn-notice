@@ -5,6 +5,8 @@ time = 20
 frp_dashboard = http://127.0.0.1:7500/
 frp_user = admin
 frp_password = 123456
+frp_conn_name = test
+frp_conn_type = tcp
 
 [bark]
 url = https://api.day.app/
