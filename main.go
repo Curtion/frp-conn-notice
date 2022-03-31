@@ -28,8 +28,8 @@ func main() {
 		log.Fatal(err)
 	}
 	frpurl := cfg.Section("frp").Key("frp_dashboard").String()
-	frpuser := cfg.Section("frp").Key("user").String()
-	frppassword := cfg.Section("frp").Key("password").String()
+	frpuser := cfg.Section("frp").Key("frp_user").String()
+	frppassword := cfg.Section("frp").Key("frp_password").String()
 	frpname := cfg.Section("frp").Key("frp_conn_name").String()
 	frptype := cfg.Section("frp").Key("frp_conn_type").String()
 	for range time.Tick(time.Duration(second) * time.Second) {
